@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Loan Calculator (LoanWise)
 
-## Getting Started
+A smart EMI strategy planner built with Next.js.  
+It helps compare baseline EMI vs optimized repayment strategy and shows interest savings, tenure reduction, charts, and amortization schedule.
 
-First, run the development server:
+## Features
+
+- Loan input (amount, interest, tenure, start date, loan type, optional manual EMI)
+- Strategy simulation (monthly extra, periodic extra EMI, yearly lump sum)
+- Savings insights (interest saved, months/years saved, closure date impact)
+- Visual analytics with charts (pie, bar, line, area)
+- Detailed amortization schedule with pagination
+- Save reports and view past reports
+- Export report via print-to-PDF workflow
+
+## Tech Stack
+
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- Recharts
+- MongoDB + Mongoose
+
+## Local Setup
+
+### 1) Install dependencies
+
+```bash
+npm install
+```
+
+### 2) Configure environment
+
+Create `.env.local` in the project root:
+
+```env
+MONGODB_URI=mongodb://localhost:27017/
+```
+
+### 3) Run development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Available Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev` - start local development server
+- `npm run build` - build production app
+- `npm run start` - run production server
+- `npm run lint` - run ESLint checks
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+- `src/app/page.tsx` - main calculator UI and insights dashboard
+- `src/app/reports` - saved reports listing/details pages
+- `src/app/api/reports` - API routes for report save/fetch and PDF generation
+- `src/lib/loan.ts` - loan simulation and strategy logic
+- `src/lib/mongodb.ts` - MongoDB connection helper
+- `src/lib/report-model.ts` - Mongoose report schema/model
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Recommended: [Vercel](https://vercel.com/new)
 
-## Deploy on Vercel
+1. Import this GitHub repo in Vercel
+2. Set environment variable `MONGODB_URI`
+3. Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Repository
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+GitHub: [AkshayBhalodiya/loan-calculator](https://github.com/AkshayBhalodiya/loan-calculator)
