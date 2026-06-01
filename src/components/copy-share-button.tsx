@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { UI } from "@/lib/ui-classes";
 
 type CopyShareButtonProps = {
   url: string;
@@ -23,7 +24,7 @@ export default function CopyShareButton({ url }: CopyShareButtonProps) {
     <button
       type="button"
       onClick={onCopy}
-      className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+      className={UI.btnSecondary}
     >
       {copied ? "URL Copied" : "Copy Share URL"}
     </button>

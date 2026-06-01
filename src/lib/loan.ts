@@ -11,7 +11,49 @@ export type StrategyInput = {
   monthlyExtra: number;
   extraEmiEveryMonths: number;
   yearlyLumpSum: number;
+  /** When true, monthly extra is included in simulation (can combine with other options). */
+  useMonthlyExtra?: boolean;
+  usePeriodicExtraEmi?: boolean;
+  useYearlyLumpSum?: boolean;
 };
+
+function resolveFlag(explicit: boolean | undefined, legacyActive: boolean): boolean {
+  if (explicit === false) return false;
+  if (explicit === true) return true;
+  return legacyActive;
+}
+
+/** Which prepayment options are active (any 1, 2, or all 3 can be on). */
+export function resolveStrategyFlags(strategy: StrategyInput) {
+  return {
+    monthly: resolveFlag(strategy.useMonthlyExtra, strategy.monthlyExtra > 0),
+    periodic: resolveFlag(
+      strategy.usePeriodicExtraEmi,
+      strategy.extraEmiEveryMonths > 0
+    ),
+    yearly: resolveFlag(strategy.useYearlyLumpSum, strategy.yearlyLumpSum > 0),
+  };
+}
+
+export function hasActiveStrategy(strategy: StrategyInput): boolean {
+  const flags = resolveStrategyFlags(strategy);
+  return flags.monthly || flags.periodic || flags.yearly;
+}
+
+export function strategySummary(strategy: StrategyInput): string {
+  const flags = resolveStrategyFlags(strategy);
+  const parts: string[] = [];
+  if (flags.monthly && strategy.monthlyExtra > 0) {
+    parts.push(`+${strategy.monthlyExtra}/month`);
+  }
+  if (flags.periodic && strategy.extraEmiEveryMonths > 0) {
+    parts.push(`1 extra EMI every ${strategy.extraEmiEveryMonths} mo`);
+  }
+  if (flags.yearly && strategy.yearlyLumpSum > 0) {
+    parts.push(`₹${strategy.yearlyLumpSum}/year`);
+  }
+  return parts.length ? parts.join(" + ") : "No extras (same as Plan A)";
+}
 
 export type AmortizationRow = {
   monthIndex: number;
@@ -48,6 +90,29 @@ function addMonths(isoDate: string, months: number) {
   const d = new Date(isoDate);
   d.setMonth(d.getMonth() + months);
   return d.toLocaleDateString("en-IN", { year: "numeric", month: "long" });
+}
+
+/**
+ * Whether to pay one extra full EMI in this payment month.
+ * @param monthIndex 1-based month of the schedule (1st payment = 1, 2nd = 2, …)
+ * @param everyMonths X = pay 1 extra full EMI every X months (0 = off)
+ * @example everyMonths 2 → extra EMI in months 2, 4, 6, …
+ */
+export function isExtraEmiMonth(monthIndex: number, everyMonths: number): boolean {
+  if (everyMonths <= 0 || monthIndex <= 0) return false;
+  return monthIndex % everyMonths === 0;
+}
+
+/** User-facing explanation of the X-month interval field */
+export function describeExtraEmiInterval(everyMonths: number): string {
+  if (everyMonths <= 0) {
+    return "Off — no periodic extra full EMI.";
+  }
+  if (everyMonths === 1) {
+    return "Every month: 1 extra full EMI on top of your regular EMI.";
+  }
+  const examples = [everyMonths, everyMonths * 2, everyMonths * 3].join(", ");
+  return `Every ${everyMonths} months: 1 extra full EMI (same as your EMI amount) — payment months ${examples}, …`;
 }
 
 export function calculateEmi(principal: number, annualRate: number, months: number) {
@@ -89,14 +154,17 @@ export function simulateLoan(
     }
 
     if (useStrategy) {
-      extra += strategy.monthlyExtra;
+      const flags = resolveStrategyFlags(strategy);
+      if (flags.monthly && strategy.monthlyExtra > 0) {
+        extra += strategy.monthlyExtra;
+      }
       if (
-        strategy.extraEmiEveryMonths > 0 &&
-        (month + 1) % strategy.extraEmiEveryMonths === 0
+        flags.periodic &&
+        isExtraEmiMonth(month + 1, strategy.extraEmiEveryMonths)
       ) {
         extra += baseEmi;
       }
-      if ((month + 1) % 12 === 0) {
+      if (flags.yearly && (month + 1) % 12 === 0 && strategy.yearlyLumpSum > 0) {
         extra += strategy.yearlyLumpSum;
       }
     }
@@ -132,11 +200,29 @@ export function simulateLoan(
   };
 }
 
-export function detectCashFlowRisk(baseEmi: number, strategy: StrategyInput) {
+/** Plain-English explanation of cash-flow risk level. */
+export function describeCashFlowRisk(risk: "Low" | "Medium" | "High"): string {
+  switch (risk) {
+    case "Low":
+      return "Your average extra payments are a small share of your EMI — usually easier on your monthly budget.";
+    case "Medium":
+      return "Your extra payments are a moderate share of your EMI — watch monthly cash flow when all extras apply.";
+    case "High":
+      return "Your extra payments are a large share of your EMI — ensure you can afford peaks (extra EMI months and yearly lump sums).";
+  }
+}
+
+export function detectCashFlowRisk(
+  baseEmi: number,
+  strategy: StrategyInput
+): "Low" | "Medium" | "High" {
+  const flags = resolveStrategyFlags(strategy);
   const avgExtra =
-    strategy.monthlyExtra +
-    (strategy.extraEmiEveryMonths > 0 ? baseEmi / strategy.extraEmiEveryMonths : 0) +
-    strategy.yearlyLumpSum / 12;
+    (flags.monthly ? strategy.monthlyExtra : 0) +
+    (flags.periodic && strategy.extraEmiEveryMonths > 0
+      ? baseEmi / strategy.extraEmiEveryMonths
+      : 0) +
+    (flags.yearly ? strategy.yearlyLumpSum / 12 : 0);
   const ratio = avgExtra / baseEmi;
   if (ratio < 0.3) return "Low";
   if (ratio < 0.7) return "Medium";

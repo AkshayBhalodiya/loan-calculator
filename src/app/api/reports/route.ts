@@ -1,36 +1,74 @@
 import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongodb";
-import { ReportModel } from "@/lib/report-model";
+import { ReportModel, reportOwnerFilter } from "@/lib/report-model";
+import {
+  enforceRateLimit,
+  getSessionUserId,
+  mongoErrorMessage,
+  requireUserId,
+} from "@/lib/api-utils";
+import { createReportSchema } from "@/lib/validation";
 
 export async function POST(req: Request) {
+  const limited = enforceRateLimit(req, "reports-post");
+  if (limited) return limited;
+
   try {
+    const authCheck = await requireUserId();
+    if (authCheck.error) return authCheck.error;
+
     await connectMongo();
-    const payload = await req.json();
-    const created = await ReportModel.create(payload);
+    const body = await req.json();
+    const parsed = createReportSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: parsed.error.issues[0]?.message ?? "Invalid report payload.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const userId = authCheck.userId;
+    const { title, notes, loan, strategy, summary, chartData } = parsed.data;
+    const defaultTitle = `${loan.loanType} Loan — ${new Date().toLocaleDateString("en-IN")}`;
+
+    const created = await ReportModel.create({
+      userId,
+      title: title?.trim() || defaultTitle,
+      notes: notes?.trim() ?? "",
+      loan,
+      strategy,
+      summary,
+      chartData: chartData ?? null,
+    });
+
     return NextResponse.json(
-      {
-        success: true,
-        reportId: created._id,
-      },
+      { success: true, reportId: created._id },
       { status: 201 }
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      {
-        success: false,
-        message:
-          message.includes("MONGODB_URI")
-            ? "MONGODB_URI missing. Add it to enable save reports."
-            : `Failed to save report: ${message}`,
-      },
+      { success: false, message: mongoErrorMessage(error, "Failed to save report") },
       { status: 500 }
     );
   }
 }
 
 export async function GET(req: Request) {
+  const limited = enforceRateLimit(req, "reports-get");
+  if (limited) return limited;
+
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, message: "Sign in to view your reports." },
+        { status: 401 }
+      );
+    }
+
     await connectMongo();
     const { searchParams } = new URL(req.url);
     const loanType = searchParams.get("loanType");
@@ -46,18 +84,20 @@ export async function GET(req: Request) {
     const safePage = Number.isFinite(page) && page > 0 ? page : 1;
     const safeLimit = Number.isFinite(limit) && limit > 0 && limit <= 50 ? limit : 10;
 
-    const filters: Record<string, unknown> = {};
-    if (loanType && loanType !== "All") {
-      filters["loan.loanType"] = loanType;
-    }
-    if (risk && risk !== "All") {
-      filters["summary.risk"] = risk;
-    }
+    const filters: Record<string, unknown> = { ...reportOwnerFilter(userId) };
+    if (loanType && loanType !== "All") filters["loan.loanType"] = loanType;
+    if (risk && risk !== "All") filters["summary.risk"] = risk;
     if (!Number.isNaN(minAmount) && minAmount > 0) {
-      filters["loan.loanAmount"] = { ...(filters["loan.loanAmount"] as Record<string, number>), $gte: minAmount };
+      filters["loan.loanAmount"] = {
+        ...(filters["loan.loanAmount"] as Record<string, number>),
+        $gte: minAmount,
+      };
     }
     if (!Number.isNaN(maxAmount) && maxAmount > 0) {
-      filters["loan.loanAmount"] = { ...(filters["loan.loanAmount"] as Record<string, number>), $lte: maxAmount };
+      filters["loan.loanAmount"] = {
+        ...(filters["loan.loanAmount"] as Record<string, number>),
+        $lte: maxAmount,
+      };
     }
     if (startDate || endDate) {
       const createdAt: Record<string, Date> = {};
@@ -82,28 +122,25 @@ export async function GET(req: Request) {
       ReportModel.countDocuments(filters),
     ]);
 
-    return NextResponse.json(
-      {
-        success: true,
-        reports,
-        pagination: {
-          page: safePage,
-          limit: safeLimit,
-          total,
-          totalPages: Math.max(1, Math.ceil(total / safeLimit)),
-        },
+    return NextResponse.json({
+      success: true,
+      reports,
+      scope: "mine",
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / safeLimit)),
       },
-      { status: 200 }
-    );
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       {
         success: false,
-        message:
-          message.includes("MONGODB_URI")
-            ? "MONGODB_URI missing. Add it to enable reports listing."
-            : "Failed to load reports.",
+        message: message.includes("MONGODB_URI")
+          ? "MONGODB_URI missing. Add it to enable reports listing."
+          : "Failed to load reports.",
       },
       { status: 500 }
     );

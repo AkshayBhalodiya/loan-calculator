@@ -1,13 +1,17 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { connectMongo } from "@/lib/mongodb";
-import { ReportModel } from "@/lib/report-model";
-import { INR } from "@/lib/loan";
+import { ReportModel, reportOwnerFilter } from "@/lib/report-model";
+import { auth } from "@/lib/auth";
+import { INR, strategySummary, type StrategyInput } from "@/lib/loan";
+import { UI } from "@/lib/ui-classes";
 import CopyShareButton from "@/components/copy-share-button";
 
 export const dynamic = "force-dynamic";
 
 type ReportDoc = {
   _id: { toString: () => string };
+  title?: string;
   createdAt?: string;
   loan?: {
     loanType?: string;
@@ -73,6 +77,12 @@ function isoDateNDaysAgo(days: number) {
 }
 
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
+  const session = await auth();
+  const userId = session?.user?.email ?? null;
+  if (!userId) {
+    redirect("/login?callbackUrl=/reports");
+  }
+
   const params = await searchParams;
   const selectedLoanType = params.loanType ?? "All";
   const selectedRisk = params.risk ?? "All";
@@ -100,7 +110,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   let error = "";
   let totalPages = 1;
 
-  const filters: Record<string, unknown> = {};
+  const filters: Record<string, unknown> = { ...reportOwnerFilter(userId) };
   if (selectedLoanType !== "All") {
     filters["loan.loanType"] = selectedLoanType;
   }
@@ -157,20 +167,23 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-8">
-      <section className="rounded-2xl bg-slate-900 p-6 text-white shadow-lg">
-        <h1 className="text-3xl font-bold">Saved Reports</h1>
-        <p className="mt-2 text-slate-200">
-          Review previously generated loan strategy reports.
-        </p>
-        <Link
-          href="/"
-          className="mt-4 inline-block rounded-md bg-white px-4 py-2 text-sm font-medium text-slate-900"
-        >
-          Back to Calculator
-        </Link>
+      <section className={UI.hero}>
+        <h1 className={UI.titleHero}>Saved Reports</h1>
+        <p className={UI.subtitle}>Review previously generated loan strategy reports.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/" className={UI.btnHero}>
+            Back to Calculator
+          </Link>
+          {userId ? (
+            <Link href="/dashboard" className={UI.btnPrimary}>
+              Dashboard
+            </Link>
+          ) : null}
+        </div>
+        <p className="lw-muted mt-2 text-xs">Your reports ({userId})</p>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
+      <section className={`${UI.card} p-4`}>
         <div className="mb-3 flex flex-wrap gap-2">
           <Link
             href={buildPageLink({
@@ -179,7 +192,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               endDate: new Date().toISOString().slice(0, 10),
               page: 1,
             })}
-            className="rounded-full bg-slate-900 px-3 py-1 text-xs text-white"
+            className="lw-pill-active rounded-full px-3 py-1 text-xs"
           >
             Last 7 Days
           </Link>
@@ -190,7 +203,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               endDate: new Date().toISOString().slice(0, 10),
               page: 1,
             })}
-            className="rounded-full bg-slate-900 px-3 py-1 text-xs text-white"
+            className="lw-pill-active rounded-full px-3 py-1 text-xs"
           >
             Last 30 Days
           </Link>
@@ -203,12 +216,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           <CopyShareButton url={shareUrl} />
         </div>
         <form className="grid gap-3 md:grid-cols-4">
-          <label className="text-sm text-slate-700">
+          <label className={UI.label}>
             Loan Type
             <select
               name="loanType"
               defaultValue={selectedLoanType}
-              className="mt-1 w-full rounded-md border p-2"
+              className={UI.input}
             >
               <option>All</option>
               <option>Home</option>
@@ -216,12 +229,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               <option>Car</option>
             </select>
           </label>
-          <label className="text-sm text-slate-700">
+          <label className={UI.label}>
             Risk
             <select
               name="risk"
               defaultValue={selectedRisk}
-              className="mt-1 w-full rounded-md border p-2"
+              className={UI.input}
             >
               <option>All</option>
               <option>Low</option>
@@ -229,67 +242,67 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               <option>High</option>
             </select>
           </label>
-          <label className="text-sm text-slate-700">
+          <label className={UI.label}>
             Sort
             <select
               name="sort"
               defaultValue={selectedSort}
-              className="mt-1 w-full rounded-md border p-2"
+              className={UI.input}
             >
               <option value="latest">Latest</option>
               <option value="maxInterestSaved">Max Interest Saved</option>
               <option value="maxMonthsSaved">Max Months Saved</option>
             </select>
           </label>
-          <label className="text-sm text-slate-700">
+          <label className={UI.label}>
             Min Amount
             <input
               type="number"
               name="minAmount"
               defaultValue={selectedMinAmount}
-              className="mt-1 w-full rounded-md border p-2"
+              className={UI.input}
               placeholder="e.g. 1000000"
             />
           </label>
-          <label className="text-sm text-slate-700">
+          <label className={UI.label}>
             Max Amount
             <input
               type="number"
               name="maxAmount"
               defaultValue={selectedMaxAmount}
-              className="mt-1 w-full rounded-md border p-2"
+              className={UI.input}
               placeholder="e.g. 9000000"
             />
           </label>
-          <label className="text-sm text-slate-700">
+          <label className={UI.label}>
             Start Date
             <input
               type="date"
               name="startDate"
               defaultValue={selectedStartDate}
-              className="mt-1 w-full rounded-md border p-2"
+              className={UI.input}
             />
           </label>
-          <label className="text-sm text-slate-700">
+          <label className={UI.label}>
             End Date
             <input
               type="date"
               name="endDate"
               defaultValue={selectedEndDate}
-              className="mt-1 w-full rounded-md border p-2"
+              className={UI.input}
             />
           </label>
           <input type="hidden" name="page" value="1" />
           <div className="flex items-end gap-2 md:col-span-2">
             <button
               type="submit"
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white"
+              className="rounded-md bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-500"
             >
               Apply Filters
             </button>
             <Link
               href="/reports"
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700"
+              className={UI.btnSecondary}
             >
               Reset
             </Link>
@@ -298,13 +311,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       </section>
 
       {error ? (
-        <section className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+        <section className="lw-alert-warning rounded-xl p-4">
           {error}
         </section>
       ) : null}
 
       {!error && reports.length === 0 ? (
-        <section className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">
+        <section className={`${UI.card} p-6`}>
           No reports found yet. Save one from the calculator page.
         </section>
       ) : null}
@@ -314,31 +327,31 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           {reports.map((report) => (
             <article
               key={report._id.toString()}
-              className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+              className={UI.card}
             >
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-lg font-semibold">
-                  {(report.loan?.loanType ?? "Loan")} Loan Report
+                  {report.title || `${report.loan?.loanType ?? "Loan"} Loan Report`}
                 </h2>
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                <span className="lw-pill rounded-full px-2 py-1 text-xs">
                   Risk: {report.summary?.risk ?? "N/A"}
                 </span>
               </div>
 
-              <div className="grid gap-2 text-sm text-slate-700">
+              <div className="grid gap-2 text-sm">
                 <p>Amount: {INR.format(report.loan?.loanAmount ?? 0)}</p>
                 <p>Rate: {report.loan?.annualRate ?? 0}%</p>
                 <p>Tenure: {report.loan?.tenureYears ?? 0} years</p>
                 <p>
                   Interest Saved:{" "}
-                  <span className="font-semibold text-emerald-700">
+                  <span className={UI.success}>
                     {INR.format(report.summary?.interestSaved ?? 0)}
                   </span>
                 </p>
                 <p>Months Saved: {Math.max(0, report.summary?.monthsSaved ?? 0)}</p>
                 <p>Original Close: {report.summary?.originalClosureDate ?? "-"}</p>
                 <p>New Close: {report.summary?.newClosureDate ?? "-"}</p>
-                <p className="text-xs text-slate-500">
+                <p className="lw-muted text-xs">
                   Saved:{" "}
                   {report.createdAt
                     ? new Date(report.createdAt).toLocaleString("en-IN")
@@ -346,15 +359,14 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                 </p>
               </div>
 
-              <div className="mt-4 border-t border-slate-100 pt-3 text-sm text-slate-600">
+              <div className="mt-4 border-t border-[var(--lw-border)] pt-3 text-sm">
                 <p>
-                  Strategy: +{INR.format(report.strategy?.monthlyExtra ?? 0)} monthly,
-                  extra EMI every {report.strategy?.extraEmiEveryMonths ?? 0} months,
-                  yearly lump sum {INR.format(report.strategy?.yearlyLumpSum ?? 0)}.
+                  Strategy:{" "}
+                  {strategySummary((report.strategy ?? {}) as StrategyInput)}
                 </p>
                 <Link
                   href={`/reports/${report._id.toString()}`}
-                  className="mt-2 inline-block text-indigo-700 hover:underline"
+                  className={`${UI.link} mt-2 inline-block`}
                 >
                   View Full Detail
                 </Link>
@@ -365,8 +377,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       ) : null}
 
       {!error ? (
-        <section className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-sm text-slate-600">
+        <section className={`${UI.card} flex items-center justify-between p-4`}>
+          <p className="lw-muted text-sm">
             Page {safePage} of {totalPages}
           </p>
           <div className="flex gap-2">
@@ -374,8 +386,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               href={buildPageLink({ ...currentState, page: Math.max(1, safePage - 1) })}
               className={`rounded-md px-3 py-2 text-sm ${
                 safePage === 1
-                  ? "pointer-events-none bg-slate-100 text-slate-400"
-                  : "bg-slate-900 text-white"
+                  ? "lw-muted pointer-events-none opacity-50"
+                  : "rounded-md bg-indigo-600 px-3 py-2 text-sm text-white"
               }`}
             >
               Previous
@@ -387,8 +399,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               })}
               className={`rounded-md px-3 py-2 text-sm ${
                 safePage >= totalPages
-                  ? "pointer-events-none bg-slate-100 text-slate-400"
-                  : "bg-slate-900 text-white"
+                  ? "lw-muted pointer-events-none opacity-50"
+                  : "rounded-md bg-indigo-600 px-3 py-2 text-sm text-white"
               }`}
             >
               Next

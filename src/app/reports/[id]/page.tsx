@@ -3,6 +3,9 @@ import mongoose from "mongoose";
 import { connectMongo } from "@/lib/mongodb";
 import { ReportModel } from "@/lib/report-model";
 import { INR } from "@/lib/loan";
+import { auth } from "@/lib/auth";
+import ReportActions from "@/components/report-actions";
+import { UI } from "@/lib/ui-classes";
 
 type DetailPageProps = {
   params: Promise<{ id: string }>;
@@ -33,7 +36,25 @@ export default async function ReportDetailPage({ params }: DetailPageProps) {
     );
   }
 
+  const session = await auth();
   const { report, error } = await getReport(id);
+
+  if (
+    report?.userId &&
+    report.userId !== session?.user?.email &&
+    session?.user?.role !== "admin"
+  ) {
+    return (
+      <main className="mx-auto min-h-screen max-w-4xl px-4 py-8 sm:px-8">
+        <p className="rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-900">
+          This report is private. Please sign in with the owner account.
+        </p>
+        <Link href="/login" className={`${UI.link} mt-4 inline-block`}>
+          Sign in
+        </Link>
+      </main>
+    );
+  }
 
   if (error) {
     return (
@@ -57,24 +78,24 @@ export default async function ReportDetailPage({ params }: DetailPageProps) {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 px-4 py-8 sm:px-8">
-      <section className="rounded-2xl bg-slate-900 p-6 text-white shadow-lg">
-        <h1 className="text-3xl font-bold">Report Detail</h1>
-        <p className="mt-2 text-slate-200">Complete saved strategy analysis.</p>
-        <Link
-          href="/reports"
-          className="mt-4 inline-block rounded-md bg-white px-4 py-2 text-sm font-medium text-slate-900"
-        >
+      <section className={UI.hero}>
+        <h1 className={UI.titleHero}>Report Detail</h1>
+        <p className={UI.subtitle}>Complete saved strategy analysis.</p>
+        <Link href="/reports" className={`${UI.btnHero} mt-4`}>
           Back to Reports
         </Link>
-        <a
-          href={`/api/reports/${id}/pdf`}
-          className="mt-4 ml-2 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
-        >
+        <a href={`/api/reports/${id}/pdf`} className={`${UI.btnPrimary} mt-4 ml-2`}>
           Download PDF
         </a>
       </section>
 
-      <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+      <ReportActions
+        reportId={id}
+        initialTitle={report.title ?? `${report.loan?.loanType ?? "Loan"} Report`}
+        initialNotes={report.notes ?? ""}
+      />
+
+      <section className={`${UI.card} grid gap-4 sm:grid-cols-2`}>
         <p>Loan Type: {report.loan?.loanType ?? "-"}</p>
         <p>Loan Amount: {INR.format(report.loan?.loanAmount ?? 0)}</p>
         <p>Interest Rate: {report.loan?.annualRate ?? 0}%</p>
@@ -86,24 +107,24 @@ export default async function ReportDetailPage({ params }: DetailPageProps) {
         </p>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-semibold">Outcome Summary</h2>
-        <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+      <section className={UI.card}>
+        <h2 className={UI.title}>Loan outcome summary</h2>
+        <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
           <p>Original Close: {report.summary?.originalClosureDate ?? "-"}</p>
           <p>New Close: {report.summary?.newClosureDate ?? "-"}</p>
           <p>Months Saved: {Math.max(0, report.summary?.monthsSaved ?? 0)}</p>
-          <p className="font-semibold text-emerald-700">
+          <p className={UI.success}>
             Interest Saved: {INR.format(report.summary?.interestSaved ?? 0)}
           </p>
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-semibold">Applied Strategy</h2>
-        <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-          <p>Monthly Extra: {INR.format(report.strategy?.monthlyExtra ?? 0)}</p>
-          <p>Extra EMI Every: {report.strategy?.extraEmiEveryMonths ?? 0} months</p>
-          <p>Yearly Lump Sum: {INR.format(report.strategy?.yearlyLumpSum ?? 0)}</p>
+      <section className={UI.card}>
+        <h2 className={UI.title}>Prepayment strategy used</h2>
+        <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <p>Extra every month: {INR.format(report.strategy?.monthlyExtra ?? 0)}</p>
+          <p>Extra full EMI every: {report.strategy?.extraEmiEveryMonths ?? 0} months (0 = off)</p>
+          <p>Yearly lump sum: {INR.format(report.strategy?.yearlyLumpSum ?? 0)}</p>
         </div>
       </section>
     </main>
