@@ -1,0 +1,26 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Frontend Docker Image and Run Tests
+      run: |
+        docker build -f Dockerfile.frontend -t loanwise-frontend:latest .
+
+    - name: Build Backend Docker Image and Run Tests
+      run: |
+        docker build -f Dockerfile.backend -t loanwise-backend:latest .

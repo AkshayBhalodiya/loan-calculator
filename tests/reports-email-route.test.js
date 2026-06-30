@@ -5,7 +5,8 @@ const { createServer } = require('node:http');
 const request = require('supertest');
 
 async function run() {
-  const { POST } = await import('../src/app/api/reports/[id]/email/route.ts');
+  const mod = await import('../src/app/api/reports/[id]/email/route.ts');
+  const POST = mod.POST || mod.default?.POST;
 
   const server = createServer(async (req, res) => {
     let body = '';

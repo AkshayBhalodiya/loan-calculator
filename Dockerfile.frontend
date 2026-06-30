@@ -1,0 +1,26 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json ./
+RUN npm ci --legacy-peer-deps
+
+# Copy application files
+COPY . .
+
+# Set placeholder environment variables required for building
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV MONGODB_URI=mongodb://localhost:27017/test
+ENV AUTH_SECRET=ci-test-secret-value-12345678
+ENV NEXTAUTH_URL=http://localhost:3000
+
+# Run existing tests inside the container
+RUN npm test
+
+# Build the Next.js frontend production bundle
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["npm", "run", "start"]

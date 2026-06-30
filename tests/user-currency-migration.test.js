@@ -1,7 +1,8 @@
 const assert = require('assert');
 
 async function run() {
-  const { backfillUserCurrencies } = await import('../src/lib/user-currency-migration.ts');
+  const mod = await import('../src/lib/user-currency-migration.ts');
+  const backfillUserCurrencies = mod.backfillUserCurrencies || mod.default?.backfillUserCurrencies;
 
   const docs = [
     { _id: 1, email: 'a@example.com' },

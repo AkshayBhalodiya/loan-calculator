@@ -1,7 +1,8 @@
 const assert = require('assert');
 
 async function run() {
-  const { backfillUserLocale } = await import('../src/lib/user-etl-pipeline.ts');
+  const mod = await import('../src/lib/user-etl-pipeline.ts');
+  const backfillUserLocale = mod.backfillUserLocale || mod.default?.backfillUserLocale;
 
   const fakeUserModel = {
     countDocuments: async () => 2,
@@ -17,3 +18,8 @@ async function run() {
 
   console.log('user ETL pipeline tests passed');
 }
+
+run().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -1,7 +1,8 @@
 const assert = require('assert');
 
 async function run() {
-  const { parseReceiptText } = await import('../src/lib/receipt-parser.ts');
+  const mod = await import('../src/lib/receipt-parser.ts');
+  const parseReceiptText = mod.parseReceiptText || mod.default?.parseReceiptText;
 
   const sample = [
     'Receipt',
