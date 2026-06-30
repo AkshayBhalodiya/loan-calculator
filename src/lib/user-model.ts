@@ -6,6 +6,7 @@ const userSchema = new Schema(
     passwordHash: { type: String, required: true },
     name: { type: String, default: "" },
     role: { type: String, enum: ["user", "moderator"], default: "user" },
+    currency: { type: String, default: "USD", trim: true, uppercase: true },
   },
   { timestamps: true }
 );
