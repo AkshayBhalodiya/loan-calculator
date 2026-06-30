@@ -14,6 +14,7 @@
     "mongoose": "^9.6.3",
     "next": "16.2.6",
     "next-auth": "^5.0.0-beta.30",
+    "nodemailer": "^6.9.4",
     "pdfkit": "^0.18.0",
     "pureimage": "^0.4.18",
     "react": "19.2.4",

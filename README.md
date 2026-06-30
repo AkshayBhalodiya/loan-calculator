@@ -58,6 +58,19 @@ GITHUB_CLIENT_ID=your-github-client-id
 GITHUB_CLIENT_SECRET=your-github-client-secret
 ```
 
+### Transactional email (Nodemailer)
+
+To enable the new login-from-new-device alert email, set SMTP environment variables in `.env.local`:
+
+```env
+SMTP_HOST=smtp.yourprovider.com
+SMTP_PORT=587
+SMTP_USER=your-smtp-user
+SMTP_PASS=your-smtp-password
+NOTIFICATION_FROM_EMAIL=no-reply@example.com
+TEST_EMAIL=your-test-recipient@example.com
+```
+
 ### 3) Run development server
 
 ```bash
