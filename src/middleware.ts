@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getToken } from "next-auth/jwt";
+import { authorizeAdminToken } from "@/lib/authorize-admin";
 
 export function middleware(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith("/api/")) {
@@ -21,6 +23,15 @@ export function middleware(request: NextRequest) {
       },
       { status: 429 }
     );
+  }
+
+  // Role-based access control for admin routes
+  if (request.nextUrl.pathname.startsWith("/api/admin")) {
+    const token = await getToken({ req: request as any, secret: process.env.AUTH_SECRET });
+    const auth = authorizeAdminToken(token);
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.message }, { status: auth.status });
+    }
   }
 
   return NextResponse.next();
