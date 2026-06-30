@@ -40,6 +40,16 @@ export async function POST(req: Request) {
     user.passwordHash = await hashPassword(password);
     await user.save();
 
+    try {
+      await fetch(`${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/api/auth/password-alert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+    } catch (err) {
+      console.error("Failed to trigger password change alert:", err);
+    }
+
     return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? "Server error" }, { status: 500 });

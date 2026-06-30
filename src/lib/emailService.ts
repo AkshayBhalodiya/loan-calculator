@@ -102,3 +102,53 @@ export async function sendNewDeviceLoginAlert(
 
   return { accepted: result.accepted, rejected: result.rejected, messageId: result.messageId };
 }
+
+export async function sendPasswordChangedAlert(to: string, time: Date) {
+  const from = process.env.NOTIFICATION_FROM_EMAIL ?? process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT ?? "587");
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) {
+    throw new Error("SMTP configuration is required for Nodemailer transactional emails.");
+  }
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+
+  const subject = "LoanWise: Your password was changed";
+  const text = `Hello,
+
+This is a security alert to confirm that the password for your LoanWise account was changed on ${time.toLocaleString()}.
+
+If you initiated this change, you can safely ignore this email.
+
+If you did not request this change, please contact support or reset your password immediately to secure your account.
+
+Best regards,
+The LoanWise Team`;
+
+  const html = `
+    <h2>Your password has been changed</h2>
+    <p>Hello,</p>
+    <p>This is a security notification to confirm that the password for your LoanWise account was changed on <strong>${time.toLocaleString()}</strong>.</p>
+    <p>If you made this change, no further action is required.</p>
+    <p><strong>If you did not make this change</strong>, please reset your password immediately or contact security support.</p>
+    <p>Best regards,<br/>The LoanWise Team</p>
+  `;
+
+  const result = await transporter.sendMail({
+    from,
+    to,
+    subject,
+    text,
+    html,
+  });
+
+  return { accepted: result.accepted, rejected: result.rejected, messageId: result.messageId };
+}
