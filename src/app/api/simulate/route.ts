@@ -10,7 +10,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const parsed = simulateSchema.safeParse(body);
     if (!parsed.success) {
-      return jsonError(parsed.error.issues[0]?.message ?? "Invalid payload.", 400);
+      // build structured field-level errors
+      const errors = parsed.error.issues.map((i) => ({
+        path: i.path.join("."),
+        message: i.message,
+      }));
+      return jsonError({ message: "Invalid payload.", errors }, 400);
     }
 
     const result = buildSimulationSummary(parsed.data.loan, parsed.data.strategy);
