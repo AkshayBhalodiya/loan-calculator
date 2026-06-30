@@ -1,6 +1,7 @@
 import { connectMongo } from "@/lib/mongodb";
 import { ReportModel } from "@/lib/report-model";
 import { jsonError, jsonOk, mongoErrorMessage } from "@/lib/api-utils";
+import { markMissedRecurringTransactions } from "@/lib/recurring-service";
 
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -25,9 +26,13 @@ export async function GET(req: Request) {
       interestSaved: r.summary?.interestSaved ?? 0,
     }));
 
+    // also run recurring missed transaction marking
+    const recurringResult = await markMissedRecurringTransactions();
+
     return jsonOk({
       processed: reminders.length,
       reminders,
+      recurring: recurringResult,
       note: "Wire this route to Vercel Cron with CRON_SECRET for scheduled runs.",
     });
   } catch (error) {
