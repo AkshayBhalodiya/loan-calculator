@@ -42,9 +42,11 @@ import {
 } from "@/lib/loan";
 import { UI } from "@/lib/ui-classes";
 import { useChartTheme } from "@/hooks/use-chart-theme";
+import { useNotificationStore } from "@/hooks/use-notification-store";
 
 export default function Home() {
   const { data: session } = useSession();
+  const { addNotification } = useNotificationStore();
   const chart = useChartTheme();
   const [loan, setLoan] = useState<LoanInput>({
     loanAmount: 5000000,
@@ -204,6 +206,7 @@ export default function Home() {
 
   async function verifyViaApi() {
     setApiVerifyMessage("Recalculating on the server…");
+    addNotification("Recalculating on the server...", "info");
     const response = await fetch("/api/simulate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -211,20 +214,24 @@ export default function Home() {
     });
     const result = await response.json();
     if (!result.success) {
-      setApiVerifyMessage(result.message || "Server verification failed.");
+      const msg = result.message || "Server verification failed.";
+      setApiVerifyMessage(msg);
+      addNotification(msg, "error");
       return;
     }
     const serverSaved = Math.round(result.summary.interestSaved);
     const localSaved = Math.round(interestSaved);
-    setApiVerifyMessage(
-      serverSaved === localSaved
-        ? `Server matches your screen — interest saved ${INR.format(serverSaved)}`
-        : `Mismatch: on-screen ${INR.format(localSaved)} vs server ${INR.format(serverSaved)}`
-    );
+    const isMatch = serverSaved === localSaved;
+    const finalMsg = isMatch
+      ? `Server matches your screen — interest saved ${INR.format(serverSaved)}`
+      : `Mismatch: on-screen ${INR.format(localSaved)} vs server ${INR.format(serverSaved)}`;
+    setApiVerifyMessage(finalMsg);
+    addNotification(finalMsg, isMatch ? "success" : "warning");
   }
 
   async function runCompare() {
     setCompareResult("Comparing your main plan with the alternative…");
+    addNotification("Comparing main plan with alternative...", "info");
     setCompareDetails(null);
     const response = await fetch("/api/compare", {
       method: "POST",
@@ -233,7 +240,9 @@ export default function Home() {
     });
     const result = await response.json();
     if (!result.success) {
-      setCompareResult(result.message || "Compare failed.");
+      const msg = result.message || "Compare failed.";
+      setCompareResult(msg);
+      addNotification(msg, "error");
       return;
     }
     const c = result.comparison;
@@ -244,17 +253,20 @@ export default function Home() {
         : c.winner === "B"
           ? "Plan C (alternative)"
           : "Both are equal";
-    setCompareResult(
-      `Lower total interest: ${winnerLabel} — saves ${INR.format(c.interestDifference)} and closes the loan ${c.monthsDifference} month(s) earlier.`
-    );
+    const finalMsg = `Lower total interest: ${winnerLabel} — saves ${INR.format(c.interestDifference)} and closes the loan ${c.monthsDifference} month(s) earlier.`;
+    setCompareResult(finalMsg);
+    addNotification("Comparison loaded successfully!", "success");
   }
 
   async function saveReport() {
     if (!session?.user?.email) {
-      setSaveMessage("Sign in required to save reports.");
+      const msg = "Sign in required to save reports.";
+      setSaveMessage(msg);
+      addNotification(msg, "warning");
       return;
     }
     setSaveMessage("Saving report...");
+    addNotification("Saving report to database...", "info");
     const response = await fetch("/api/reports", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -277,10 +289,14 @@ export default function Home() {
     });
     const result = await response.json();
     if (result.success) {
-      setSaveMessage(`Report saved. ID: ${result.reportId}`);
+      const msg = `Report saved. ID: ${result.reportId}`;
+      setSaveMessage(msg);
+      addNotification("Strategy report saved successfully!", "success");
       return;
     }
-    setSaveMessage(result.message || "Save failed.");
+    const failMsg = result.message || "Save failed.";
+    setSaveMessage(failMsg);
+    addNotification(failMsg, "error");
   }
 
   return (
@@ -811,6 +827,7 @@ export default function Home() {
                     yearlyLumpSum: loan.loanAmount * 0.1,
                     useYearlyLumpSum: true,
                   });
+                  addNotification(`Applied 10% Prepayment Preset: ${INR.format(loan.loanAmount * 0.1)}`, "success");
                 }}
                 className="w-full text-center py-2 px-3 text-xs font-semibold rounded-lg bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/40 transition-colors border border-amber-200/50 dark:border-amber-900/30"
               >
