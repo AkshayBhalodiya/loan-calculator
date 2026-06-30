@@ -6,17 +6,17 @@ declare module "next-auth" {
     user: {
       email?: string | null;
       name?: string | null;
-      role?: "user" | "admin";
+      role?: "user" | "admin" | "moderator";
     };
   }
 
   interface User {
-    role?: "user" | "admin";
+    role?: "user" | "admin" | "moderator";
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
-    role?: "user" | "admin";
+    role?: "user" | "admin" | "moderator";
   }
 }
