@@ -16,13 +16,15 @@ export function middleware(request: NextRequest) {
 
   const result = checkRateLimit(`api:${ip}`, 120, 60_000);
   if (!result.ok) {
-    return NextResponse.json(
+    const res = NextResponse.json(
       {
         success: false,
         message: `Too many requests. Retry in ${result.retryAfterSec}s.`,
       },
       { status: 429 }
     );
+    res.headers.set("Retry-After", String(result.retryAfterSec));
+    return res;
   }
 
   // Role-based access control for admin routes
@@ -31,6 +33,16 @@ export function middleware(request: NextRequest) {
     const auth = authorizeAdminToken(token);
     if (!auth.ok) {
       return NextResponse.json({ error: auth.message }, { status: auth.status });
+    }
+  }
+
+  // Endpoint-specific stricter rate limit for admin users listing
+  if (request.nextUrl.pathname === "/api/admin/users") {
+    const adminLimit = checkRateLimit(`admin:users:${ip}`, 10, 15_000); // 10 req per 15s
+    if (!adminLimit.ok) {
+      const res = NextResponse.json({ success: false, message: `Too many requests. Retry in ${adminLimit.retryAfterSec}s.` }, { status: 429 });
+      res.headers.set("Retry-After", String(adminLimit.retryAfterSec));
+      return res;
     }
   }
 
