@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
   // rotated
   const res = NextResponse.json({ success: true });
-  res.cookies.set("refreshToken", result.newToken, {
+  res.cookies.set("refreshToken", result.newToken ?? "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     path: "/",

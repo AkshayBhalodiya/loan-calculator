@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { createRefreshToken } from "@/lib/refresh-tokens";
-import { getServerSession } from "next-auth";
 import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
   // create a refresh token for the currently-signed-in user
-  const session = await getServerSession(auth as any);
+  const session = await auth();
   if (!session || !session.user || !session.user.email) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }

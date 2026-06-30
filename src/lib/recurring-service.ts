@@ -32,7 +32,7 @@ export async function markMissedRecurringTransactions() {
     const list = byUser[userId];
     const ids = list.map((l) => l._id);
     const res = await RecurringTransactionModel.updateMany({ _id: { $in: ids } }, { $set: { status: "missed", missedAt: new Date() } });
-    totalMarked += (res.modifiedCount ?? res.nModified ?? 0);
+    totalMarked += (res.modifiedCount ?? 0);
 
     // trigger notification for this user
     try {

@@ -47,6 +47,10 @@ html.dark {
 @theme inline {
   --color-background: var(--lw-bg);
   --color-foreground: var(--lw-text);
+  --color-card: var(--lw-surface);
+  --color-card-foreground: var(--lw-text);
+  --color-border: var(--lw-border);
+  --color-muted-foreground: var(--lw-text-muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

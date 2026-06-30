@@ -1,14 +1,3 @@
-import { NextResponse } from "next/server";
-
-export async function GET() {
-  // placeholder admin-protected endpoint returning a short user list
-  const users = [
-    { id: "1", email: "alice@example.com", role: "user" },
-    { id: "2", email: "bob@example.com", role: "moderator" },
-  ];
-
-  return NextResponse.json({ success: true, users });
-}
 import { connectMongo } from "@/lib/mongodb";
 import { UserModel } from "@/lib/user-model";
 import { ReportModel } from "@/lib/report-model";

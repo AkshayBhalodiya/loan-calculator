@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { buildSimulationSummary } from "@/lib/simulation-service";
 import { enforceRateLimit, jsonError, jsonOk, mongoErrorMessage } from "@/lib/api-utils";
 import { simulateSchema } from "@/lib/validation";
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
         path: i.path.join("."),
         message: i.message,
       }));
-      return jsonError({ message: "Invalid payload.", errors }, 400);
+      return NextResponse.json({ success: false, message: "Invalid payload.", errors }, { status: 400 });
     }
 
     const result = buildSimulationSummary(parsed.data.loan, parsed.data.strategy);

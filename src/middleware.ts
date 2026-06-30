@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getToken } from "next-auth/jwt";
 import { authorizeAdminToken } from "@/lib/authorize-admin";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
