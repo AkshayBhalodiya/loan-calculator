@@ -6,10 +6,45 @@ import { INR } from "@/lib/loan";
 import { auth } from "@/lib/auth";
 import ReportActions from "@/components/report-actions";
 import { UI } from "@/lib/ui-classes";
+import type { Metadata } from "next";
 
 type DetailPageProps = {
   params: Promise<{ id: string }>;
 };
+
+export async function generateMetadata({ params }: DetailPageProps): Promise<Metadata> {
+  const { id } = await params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return {
+      title: "Invalid Report - LoanWise",
+      description: "The requested loan prepayment strategy report has an invalid ID.",
+    };
+  }
+
+  const { report } = await getReport(id);
+  if (!report) {
+    return {
+      title: "Report Not Found - LoanWise",
+      description: "The requested loan prepayment strategy report could not be found.",
+    };
+  }
+
+  const reportTitle = report.title ? `${report.title} - LoanWise` : `${report.loan?.loanType ?? "Loan"} Prepayment Report - LoanWise`;
+  const amtFormatted = report.loan?.loanAmount ? report.loan.loanAmount.toLocaleString("en-IN") : "0";
+  const interestSavedFormatted = report.summary?.interestSaved ? report.summary.interestSaved.toLocaleString("en-IN") : "0";
+  const description = `Prepayment strategy details for ₹${amtFormatted} ${report.loan?.loanType ?? "Loan"}. Interest saved: ₹${interestSavedFormatted}.`;
+
+  return {
+    title: reportTitle,
+    description,
+    openGraph: {
+      title: reportTitle,
+      description,
+      type: "website",
+      url: `/reports/${id}`,
+    },
+  };
+}
 
 export const dynamic = "force-dynamic";
 
