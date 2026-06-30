@@ -30,6 +30,12 @@ export default function LoginForm() {
         setError("Invalid email or password. Please try again.");
         return;
       }
+      // create a refresh token cookie (server will use current session)
+      try {
+        await fetch("/api/auth/refresh/create", { method: "POST" });
+      } catch (e) {
+        // ignore — refresh tokens are best-effort
+      }
       window.location.href = callbackUrl.startsWith("/") ? callbackUrl : "/";
     } finally {
       setLoading(false);
