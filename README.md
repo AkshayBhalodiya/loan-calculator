@@ -44,6 +44,20 @@ NEXTAUTH_URL=http://localhost:3000
 
 See `.env.example` for optional Google, Resend email, and cron settings.
 
+### Optional OAuth providers
+
+To enable third-party OAuth sign-in, set the following environment variables in `.env.local`:
+
+```env
+# Google (optional)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# GitHub (optional)
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+```
+
 ### 3) Run development server
 
 ```bash

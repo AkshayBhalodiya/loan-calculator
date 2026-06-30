@@ -50,6 +50,23 @@ export default function LoginForm() {
         Enter your credentials to access your dashboard and saved reports.
       </p>
 
+      <div className="mt-4 space-y-2">
+        <button
+          type="button"
+          className="lw-auth-btn"
+          onClick={() => signIn("google", { callbackUrl: callbackUrl.startsWith("/") ? callbackUrl : "/" })}
+        >
+          Continue with Google
+        </button>
+        <button
+          type="button"
+          className="lw-auth-btn"
+          onClick={() => signIn("github", { callbackUrl: callbackUrl.startsWith("/") ? callbackUrl : "/" })}
+        >
+          Continue with GitHub
+        </button>
+      </div>
+
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
         <AuthField
           id="login-email"
