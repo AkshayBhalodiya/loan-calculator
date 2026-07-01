@@ -100,11 +100,12 @@ export default function SiteHeader() {
 
   const navItems: NavItem[] = [{ href: "/", label: "Calculator", match: (p) => p === "/" }];
 
-  if (email) {
+  if (status === "authenticated") {
     navItems.push(
-      { href: "/dashboard", label: "Dashboard", match: (p) => p.startsWith("/dashboard") },
       { href: "/reports", label: "Reports", match: (p) => p.startsWith("/reports") },
-      { href: "/organization", label: "Organization", match: (p) => p.startsWith("/organization") }
+      { href: "/dashboard", label: "Dashboard", match: (p) => p.startsWith("/dashboard") },
+      { href: "/organization", label: "Team", match: (p) => p.startsWith("/organization") },
+      { href: "/receipts", label: "Receipts", match: (p) => p.startsWith("/receipts") }
     );
     if (role === "admin") {
       navItems.push({ href: "/admin", label: "Admin", match: (p) => p.startsWith("/admin") });
