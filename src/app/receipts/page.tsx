@@ -53,6 +53,7 @@ export default function ReceiptsPage() {
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -133,6 +134,27 @@ export default function ReceiptsPage() {
 
   function removeFile(id: string) {
     setSelectedFiles((prev) => prev.filter((f) => f.id !== id));
+  }
+
+  function handleDragStartItem(e: React.DragEvent<HTMLDivElement>, index: number) {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleDragOverItem(e: React.DragEvent<HTMLDivElement>, index: number) {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const reordered = [...selectedFiles];
+    const draggedItem = reordered[draggedIndex];
+    reordered.splice(draggedIndex, 1);
+    reordered.splice(index, 0, draggedItem);
+    setDraggedIndex(index);
+    setSelectedFiles(reordered);
+  }
+
+  function handleDragEndItem() {
+    setDraggedIndex(null);
   }
 
   async function uploadFiles() {
@@ -241,9 +263,23 @@ export default function ReceiptsPage() {
           </div>
 
           <div className="divide-y divide-[var(--lw-border)] max-h-80 overflow-y-auto">
-            {selectedFiles.map((file) => (
-              <div key={file.id} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
+            {selectedFiles.map((file, idx) => (
+              <div 
+                key={file.id} 
+                draggable
+                onDragStart={(e) => handleDragStartItem(e, idx)}
+                onDragOver={(e) => handleDragOverItem(e, idx)}
+                onDragEnd={handleDragEndItem}
+                className={`flex items-center justify-between py-3 transition-colors duration-150 ${
+                  draggedIndex === idx
+                    ? "bg-[var(--lw-surface-accent-b)] opacity-60"
+                    : "hover:bg-[var(--lw-surface-muted)]"
+                }`}
+              >
+                <div className="flex items-center gap-3 pl-2">
+                  <div className="cursor-grab active:cursor-grabbing text-slate-400 p-1 flex items-center justify-center" title="Drag to reorder">
+                    <i className="fa-solid fa-grip-vertical text-sm"></i>
+                  </div>
                   <i className={file.iconClass}></i>
                   <div>
                     <p className="text-xs font-bold text-[var(--lw-text)] max-w-md truncate">
@@ -255,7 +291,7 @@ export default function ReceiptsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 pr-2">
                   {file.status === "pending" && (
                     <span className="text-[10px] font-semibold text-amber-500">
                       Pending
