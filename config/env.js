@@ -2,6 +2,12 @@ const fs = require("fs");
 const path = require("path");
 
 function checkEnv() {
+  // Skip env validation at build time (e.g. during `next build` on Vercel).
+  // Environment variables are only available at runtime on the server.
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    return;
+  }
+
   const examplePath = path.resolve(process.cwd(), ".env.example");
   if (!fs.existsSync(examplePath)) {
     return;
