@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* Dark mode only when html has .dark (not OS setting) */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Dark mode only when html has .dark or .midnight (not OS setting) */
+@custom-variant dark (&:where(.dark, .midnight, .dark *, .midnight *));
 
 /* ========== LIGHT THEME ========== */
 :root,
@@ -42,6 +42,26 @@ html.dark {
   --lw-header-bg: rgba(15, 23, 42, 0.95);
   --lw-success: #34d399;
   --lw-link: #a5b4fc;
+}
+
+/* ========== MIDNIGHT THEME ========== */
+html.midnight {
+  color-scheme: dark;
+  --lw-bg: #0b0720;
+  --lw-surface: #140e34;
+  --lw-surface-muted: #1f184b;
+  --lw-surface-accent-a: #1f184b;
+  --lw-surface-accent-b: #32105c;
+  --lw-surface-accent-c: #0f351e;
+  --lw-border: #4d1c82;
+  --lw-text: #f1f3f9;
+  --lw-text-muted: #a5b4fc;
+  --lw-input-bg: #0b0720;
+  --lw-hero-bg: #140e34;
+  --lw-hero-text: #f1f3f9;
+  --lw-header-bg: rgba(20, 14, 52, 0.95);
+  --lw-success: #10b981;
+  --lw-link: #c084fc;
 }
 
 @theme inline {
@@ -169,7 +189,8 @@ body {
   color: transparent;
 }
 
-html.dark .lw-header-brand-accent {
+html.dark .lw-header-brand-accent,
+html.midnight .lw-header-brand-accent {
   background: linear-gradient(135deg, #a5b4fc, #c4b5fd);
   -webkit-background-clip: text;
   background-clip: text;
@@ -390,7 +411,8 @@ html.dark .lw-header-brand-accent {
   animation: lw-header-slide 0.2s ease-out;
 }
 
-html.dark .lw-header-mobile {
+html.dark .lw-header-mobile,
+html.midnight .lw-header-mobile {
   box-shadow: 0 12px 40px -8px rgb(0 0 0 / 0.5);
 }
 
@@ -456,7 +478,8 @@ html.light .lw-plan-a-edit {
   background-color: #f8fafc;
 }
 
-html.dark .lw-plan-a-edit {
+html.dark .lw-plan-a-edit,
+html.midnight .lw-plan-a-edit {
   border-color: #475569;
   background-color: var(--lw-surface-accent-a);
   box-shadow:
@@ -481,7 +504,8 @@ html.light .lw-plan-b {
   border-color: #a5b4fc;
 }
 
-html.dark .lw-plan-b {
+html.dark .lw-plan-b,
+html.midnight .lw-plan-b {
   border-color: #4338ca;
 }
 
@@ -501,7 +525,8 @@ html.light .lw-plan-c {
   border-color: #6ee7b7;
 }
 
-html.dark .lw-plan-c {
+html.dark .lw-plan-c,
+html.midnight .lw-plan-c {
   border-color: #047857;
 }
 
@@ -572,7 +597,8 @@ textarea:focus {
   border: 1px solid #0f172a;
 }
 
-html.dark .lw-pill-active {
+html.dark .lw-pill-active,
+html.midnight .lw-pill-active {
   background-color: #f8fafc;
   color: #0f172a;
   border-color: #f8fafc;
@@ -607,7 +633,8 @@ html.dark .lw-pill-active {
   color: #78350f;
 }
 
-html.dark .lw-alert-warning {
+html.dark .lw-alert-warning,
+html.midnight .lw-alert-warning {
   background-color: #451a03;
   color: #fde68a;
   border-color: #b45309;
@@ -628,7 +655,8 @@ html.dark .lw-alert-warning {
   background-color: var(--lw-surface-accent-b);
 }
 
-html.dark .lw-strategy-option--on {
+html.dark .lw-strategy-option--on,
+html.midnight .lw-strategy-option--on {
   border-color: #4338ca;
 }
 
@@ -647,7 +675,8 @@ html.dark .lw-strategy-option--on {
   color: #ffffff;
 }
 
-html.dark .lw-auth-brand {
+html.dark .lw-auth-brand,
+html.midnight .lw-auth-brand {
   background: linear-gradient(145deg, #1e1b4b 0%, #312e81 45%, #4c1d95 100%);
 }
 
@@ -684,7 +713,8 @@ html.dark .lw-auth-brand {
     0 20px 40px -12px rgb(79 70 229 / 0.12);
 }
 
-html.dark .lw-auth-card {
+html.dark .lw-auth-card,
+html.midnight .lw-auth-card {
   box-shadow:
     0 4px 6px -1px rgb(0 0 0 / 0.3),
     0 20px 40px -12px rgb(0 0 0 / 0.5);
@@ -837,7 +867,8 @@ html.dark .lw-auth-card {
   padding: 0.75rem 1rem;
 }
 
-html.dark .lw-auth-error {
+html.dark .lw-auth-error,
+html.midnight .lw-auth-error {
   border-color: #7f1d1d;
   background-color: #450a0a;
   color: #fecaca;
@@ -852,7 +883,8 @@ html.dark .lw-auth-error {
   padding: 0.75rem 1rem;
 }
 
-html.dark .lw-auth-success {
+html.dark .lw-auth-success,
+html.midnight .lw-auth-success {
   border-color: #065f46;
   background-color: #052e16;
   color: #6ee7b7;

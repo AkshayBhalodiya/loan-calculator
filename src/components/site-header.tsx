@@ -5,41 +5,24 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
-type ThemeMode = "light" | "dark";
+export type ThemeMode = "light" | "dark" | "midnight" | "system";
 const STORAGE_KEY = "loanwise-theme";
 
-function applyTheme(mode: ThemeMode) {
+export function applyTheme(mode: ThemeMode) {
+  if (typeof window === "undefined") return;
   const root = document.documentElement;
-  root.classList.remove("light", "dark");
-  root.classList.add(mode);
-  root.style.colorScheme = mode;
-}
-
-function ThemeIcon({ mode }: { mode: ThemeMode }) {
-  if (mode === "light") {
-    return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
+  root.classList.remove("light", "dark", "midnight");
+  
+  let resolved: "light" | "dark" | "midnight" = "light";
+  if (mode === "system") {
+    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    resolved = isDark ? "dark" : "light";
+  } else {
+    resolved = mode;
   }
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
-      <path
-        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
+  
+  root.classList.add(resolved);
+  root.style.colorScheme = resolved === "light" ? "light" : "dark";
 }
 
 function MenuIcon({ open }: { open: boolean }) {
@@ -75,21 +58,32 @@ export default function SiteHeader() {
   const email = session?.user?.email;
   const role = session?.user?.role;
   const [theme, setTheme] = useState<ThemeMode>("light");
+  const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
     const initial =
-      saved === "light" || saved === "dark"
+      saved === "light" || saved === "dark" || saved === "midnight" || saved === "system"
         ? saved
-        : window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
+        : "system";
     setTheme(initial);
     applyTheme(initial);
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (theme !== "system" || !mounted) return;
+    
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const listener = () => {
+      applyTheme("system");
+    };
+    
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, [theme, mounted]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -102,12 +96,7 @@ export default function SiteHeader() {
     };
   }, [menuOpen]);
 
-  function toggleTheme() {
-    const next = theme === "light" ? "dark" : "light";
-    setTheme(next);
-    localStorage.setItem(STORAGE_KEY, next);
-    applyTheme(next);
-  }
+
 
   const navItems: NavItem[] = [{ href: "/", label: "Calculator", match: (p) => p === "/" }];
 
@@ -178,16 +167,72 @@ export default function SiteHeader() {
             </>
           )}
 
-          <button
-            type="button"
-            onClick={toggleTheme}
-            disabled={!mounted}
-            className="lw-header-theme"
-            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-            title={theme === "light" ? "Dark mode" : "Light mode"}
-          >
-            {mounted ? <ThemeIcon mode={theme} /> : <span className="lw-header-theme-dot" />}
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowThemeMenu((o) => !o)}
+              disabled={!mounted}
+              className="lw-header-theme flex items-center justify-center"
+              aria-label="Select theme"
+              title="Select theme"
+              id="theme-dropdown-btn"
+            >
+              {mounted ? (
+                theme === "light" ? (
+                  <span>☀️</span>
+                ) : theme === "dark" ? (
+                  <span>🌙</span>
+                ) : theme === "midnight" ? (
+                  <span>🌌</span>
+                ) : (
+                  <span>💻</span>
+                )
+              ) : (
+                <span className="lw-header-theme-dot" />
+              )}
+            </button>
+
+            {showThemeMenu && (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-10 cursor-default bg-transparent"
+                  onClick={() => setShowThemeMenu(false)}
+                />
+                <div 
+                  className="absolute right-0 mt-2 w-36 rounded-xl border border-[var(--lw-border)] bg-[var(--lw-surface)] p-1 shadow-lg z-20"
+                  role="menu"
+                >
+                  {[
+                    { id: "light", label: "Light", icon: "☀️" },
+                    { id: "dark", label: "Dark", icon: "🌙" },
+                    { id: "midnight", label: "Midnight", icon: "🌌" },
+                    { id: "system", label: "System", icon: "💻" }
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => {
+                        setTheme(option.id as ThemeMode);
+                        localStorage.setItem(STORAGE_KEY, option.id);
+                        applyTheme(option.id as ThemeMode);
+                        setShowThemeMenu(false);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-xs font-semibold hover:bg-[var(--lw-surface-muted)] transition-colors ${
+                        theme === option.id
+                          ? "bg-[var(--lw-surface-accent-b)] text-[var(--lw-link)]"
+                          : "text-[var(--lw-text)]"
+                      }`}
+                      role="menuitem"
+                    >
+                      <span>{option.icon}</span>
+                      <span>{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           <button
             type="button"
