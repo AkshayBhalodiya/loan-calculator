@@ -3,6 +3,8 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
 import { authenticateUser } from "@/lib/auth-users";
+import { connectMongo } from "@/lib/mongodb";
+import { UserModel } from "@/lib/user-model";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
@@ -49,12 +51,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.email = user.email;
         const role = (user as { role?: "user" | "admin" }).role;
         token.role = role === "admin" ? "admin" : "user";
         token.sub = user.id;
+      }
+      if (token.email) {
+        try {
+          await connectMongo();
+          const dbUser = await UserModel.findOne({ email: token.email }).lean();
+          if (dbUser) {
+            token.orgId = dbUser.orgId?.toString() ?? null;
+          } else {
+            token.orgId = null;
+          }
+        } catch (err) {
+          console.error("Error fetching orgId in jwt callback:", err);
+          token.orgId = null;
+        }
       }
       return token;
     },
@@ -62,6 +78,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.email = token.email as string;
         session.user.role = (token.role as "user" | "admin") ?? "user";
+        session.user.orgId = token.orgId as string | null;
       }
       return session;
     },

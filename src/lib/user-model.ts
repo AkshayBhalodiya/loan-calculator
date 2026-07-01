@@ -7,6 +7,7 @@ const userSchema = new Schema(
     name: { type: String, default: "" },
     role: { type: String, enum: ["user", "moderator"], default: "user" },
     currency: { type: String, default: "USD", trim: true, uppercase: true },
+    orgId: { type: Schema.Types.ObjectId, ref: "Organization", default: null },
   },
   { timestamps: true }
 );

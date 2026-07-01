@@ -79,6 +79,7 @@ function isoDateNDaysAgo(days: number) {
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const session = await auth();
   const userId = session?.user?.email ?? null;
+  const orgId = session?.user?.orgId ?? null;
   if (!userId) {
     redirect("/login?callbackUrl=/reports");
   }
@@ -110,7 +111,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   let error = "";
   let totalPages = 1;
 
-  const filters: Record<string, unknown> = { ...reportOwnerFilter(userId) };
+  const filters: Record<string, unknown> = { ...reportOwnerFilter(userId, orgId) };
   if (selectedLoanType !== "All") {
     filters["loan.loanType"] = selectedLoanType;
   }

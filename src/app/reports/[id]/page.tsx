@@ -74,9 +74,13 @@ export default async function ReportDetailPage({ params }: DetailPageProps) {
   const session = await auth();
   const { report, error } = await getReport(id);
 
+  const userOrgId = session?.user?.orgId;
+  const isOrgMember = report?.orgId && userOrgId && report.orgId.toString() === userOrgId;
+
   if (
     report?.userId &&
     report.userId !== session?.user?.email &&
+    !isOrgMember &&
     session?.user?.role !== "admin"
   ) {
     return (

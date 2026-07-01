@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { connectMongo } from "@/lib/mongodb";
 import { ReportModel } from "@/lib/report-model";
+import { auth } from "@/lib/auth";
 import {
   enforceRateLimit,
   getSessionUserId,
@@ -24,16 +25,25 @@ export async function GET(req: Request, { params }: Params) {
 
   try {
     await connectMongo();
-    const userId = await getSessionUserId();
+    const session = await auth();
+    const userId = session?.user?.email ?? null;
+    const orgId = session?.user?.orgId ?? null;
+    const role = session?.user?.role ?? null;
+
     const report = await ReportModel.findById(id).lean();
     if (!report) return jsonError("Report not found.", 404);
-    if (report.userId && report.userId !== userId) {
-      return jsonError("Not allowed to export this report.", 403);
-    }
-    if (!report.userId && userId) {
-      /* public report — allowed */
-    } else if (report.userId && !userId) {
-      return jsonError("Sign in to export this report.", 401);
+
+    if (report.userId) {
+      if (role !== "admin") {
+        const isOwner = report.userId === userId;
+        const isOrgMember = report.orgId && orgId && report.orgId.toString() === orgId;
+        if (!isOwner && !isOrgMember) {
+          if (!userId) {
+            return jsonError("Sign in to export this report.", 401);
+          }
+          return jsonError("Not allowed to export this report.", 403);
+        }
+      }
     }
 
     if (format === "csv") {

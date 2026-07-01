@@ -13,11 +13,14 @@ import { patchReportSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
 
-async function findOwnedReport(id: string, userId: string | null, role: string | null) {
+export async function findOwnedReport(id: string, userId: string | null, orgId: string | null, role: string | null) {
   const report = await ReportModel.findById(id);
   if (!report) return { report: null, forbidden: false };
 
   if (role === "admin") return { report, forbidden: false };
+  if (report.orgId && orgId && report.orgId.toString() === orgId) {
+    return { report, forbidden: false };
+  }
   if (!userId || report.userId !== userId) {
     return { report: null, forbidden: true };
   }
@@ -37,8 +40,9 @@ export async function GET(_: Request, { params }: Params) {
     await connectMongo();
     const session = await auth();
     const userId = session?.user?.email ?? null;
+    const orgId = session?.user?.orgId ?? null;
     const role = session?.user?.role ?? null;
-    const { report, forbidden } = await findOwnedReport(id, userId, role);
+    const { report, forbidden } = await findOwnedReport(id, userId, orgId, role);
     if (forbidden) return jsonError("Sign in to view this report.", 403);
     if (!report) return jsonError("Report not found.", 404);
     return jsonOk({ report: report.toObject() });
@@ -66,8 +70,9 @@ export async function PATCH(req: Request, { params }: Params) {
     await connectMongo();
     const session = await auth();
     const userId = session?.user?.email ?? null;
+    const orgId = session?.user?.orgId ?? null;
     const role = session?.user?.role ?? null;
-    const { report, forbidden } = await findOwnedReport(id, userId, role);
+    const { report, forbidden } = await findOwnedReport(id, userId, orgId, role);
     if (forbidden) return jsonError("Not allowed to edit this report.", 403);
     if (!report) return jsonError("Report not found.", 404);
 
@@ -94,8 +99,9 @@ export async function DELETE(req: Request, { params }: Params) {
     await connectMongo();
     const session = await auth();
     const userId = session?.user?.email ?? null;
+    const orgId = session?.user?.orgId ?? null;
     const role = session?.user?.role ?? null;
-    const { report, forbidden } = await findOwnedReport(id, userId, role);
+    const { report, forbidden } = await findOwnedReport(id, userId, orgId, role);
     if (forbidden) return jsonError("Not allowed to delete this report.", 403);
     if (!report) return jsonError("Report not found.", 404);
 

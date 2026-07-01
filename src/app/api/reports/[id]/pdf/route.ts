@@ -5,6 +5,7 @@ import * as PImage from "pureimage";
 import { PassThrough } from "stream";
 import { connectMongo } from "@/lib/mongodb";
 import { ReportModel } from "@/lib/report-model";
+import { auth } from "@/lib/auth";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -117,9 +118,33 @@ export async function GET(_: Request, { params }: Params) {
 
   try {
     await connectMongo();
+    const session = await auth();
+    const userId = session?.user?.email ?? null;
+    const orgId = session?.user?.orgId ?? null;
+    const role = session?.user?.role ?? null;
+
     const report = await ReportModel.findById(id).lean();
     if (!report) {
       return NextResponse.json({ success: false, message: "Report not found." }, { status: 404 });
+    }
+
+    if (report.userId) {
+      if (role !== "admin") {
+        const isOwner = report.userId === userId;
+        const isOrgMember = report.orgId && orgId && report.orgId.toString() === orgId;
+        if (!isOwner && !isOrgMember) {
+          if (!userId) {
+            return NextResponse.json(
+              { success: false, message: "Sign in to access this PDF." },
+              { status: 401 }
+            );
+          }
+          return NextResponse.json(
+            { success: false, message: "Unauthorized to access this report PDF." },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     const doc = new PDFDocument({ size: "A4", margin: 40 });

@@ -114,7 +114,8 @@ export default function SiteHeader() {
   if (email) {
     navItems.push(
       { href: "/dashboard", label: "Dashboard", match: (p) => p.startsWith("/dashboard") },
-      { href: "/reports", label: "Reports", match: (p) => p.startsWith("/reports") }
+      { href: "/reports", label: "Reports", match: (p) => p.startsWith("/reports") },
+      { href: "/organization", label: "Organization", match: (p) => p.startsWith("/organization") }
     );
     if (role === "admin") {
       navItems.push({ href: "/admin", label: "Admin", match: (p) => p.startsWith("/admin") });

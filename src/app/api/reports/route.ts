@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongodb";
 import { ReportModel, reportOwnerFilter } from "@/lib/report-model";
+import { auth } from "@/lib/auth";
 import {
   enforceRateLimit,
   getSessionUserId,
@@ -14,8 +15,13 @@ export async function POST(req: Request) {
   if (limited) return limited;
 
   try {
-    const authCheck = await requireUserId();
-    if (authCheck.error) return authCheck.error;
+    const session = await auth();
+    if (!session || !session.user || !session.user.email) {
+      return NextResponse.json(
+        { success: false, message: "Sign in required." },
+        { status: 401 }
+      );
+    }
 
     await connectMongo();
     const body = await req.json();
@@ -30,12 +36,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const userId = authCheck.userId;
+    const userId = session.user.email;
+    const orgId = session.user.orgId ?? null;
     const { title, notes, loan, strategy, summary, chartData } = parsed.data;
     const defaultTitle = `${loan.loanType} Loan — ${new Date().toLocaleDateString("en-IN")}`;
 
     const created = await ReportModel.create({
       userId,
+      orgId,
       title: title?.trim() || defaultTitle,
       notes: notes?.trim() ?? "",
       loan,
@@ -61,13 +69,15 @@ export async function GET(req: Request) {
   if (limited) return limited;
 
   try {
-    const userId = await getSessionUserId();
-    if (!userId) {
+    const session = await auth();
+    if (!session || !session.user || !session.user.email) {
       return NextResponse.json(
         { success: false, message: "Sign in to view your reports." },
         { status: 401 }
       );
     }
+    const userId = session.user.email;
+    const orgId = session.user.orgId ?? null;
 
     await connectMongo();
     const { searchParams } = new URL(req.url);
@@ -84,7 +94,7 @@ export async function GET(req: Request) {
     const safePage = Number.isFinite(page) && page > 0 ? page : 1;
     const safeLimit = Number.isFinite(limit) && limit > 0 && limit <= 50 ? limit : 10;
 
-    const filters: Record<string, unknown> = { ...reportOwnerFilter(userId) };
+    const filters: Record<string, unknown> = { ...reportOwnerFilter(userId, orgId) };
     if (loanType && loanType !== "All") filters["loan.loanType"] = loanType;
     if (risk && risk !== "All") filters["summary.risk"] = risk;
     if (!Number.isNaN(minAmount) && minAmount > 0) {

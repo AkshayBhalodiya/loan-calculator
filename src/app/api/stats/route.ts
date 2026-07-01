@@ -15,13 +15,14 @@ export async function GET(req: Request) {
   try {
     const session = await auth();
     const userId = session?.user?.email;
+    const orgId = session?.user?.orgId ?? null;
     if (!userId) {
       return jsonError("Sign in to view dashboard stats.", 401);
     }
 
     await connectMongo();
     const ownerFilter =
-      session?.user?.role === "admin" ? {} : reportOwnerFilter(userId);
+      session?.user?.role === "admin" ? {} : reportOwnerFilter(userId, orgId);
 
     const [totalReports, agg, highRiskCount] = await Promise.all([
       ReportModel.countDocuments(ownerFilter),
