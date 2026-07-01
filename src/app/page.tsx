@@ -123,6 +123,46 @@ export default function Home() {
   const cashFlowRisk = detectCashFlowRisk(basePlan.emi, strategy);
   const [saveMessage, setSaveMessage] = useState<string>("");
   const [schedulePage, setSchedulePage] = useState(1);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const stateParam = params.get("state");
+    if (!stateParam) return;
+
+    try {
+      const jsonStr = decodeURIComponent(escape(atob(stateParam)));
+      const data = JSON.parse(jsonStr);
+
+      if (data.loan) {
+        setLoan((prev) => ({ ...prev, ...data.loan }));
+      }
+      if (data.strategy) {
+        setStrategy((prev) => ({ ...prev, ...data.strategy }));
+      }
+      addNotification("Successfully restored calculator inputs from shared URL! 🚀", "success");
+    } catch (err) {
+      console.error("Failed to restore state from URL:", err);
+      addNotification("Failed to restore shared state from URL.", "error");
+    }
+  }, [addNotification]);
+
+  async function copyShareUrl() {
+    const payload = { loan, strategy };
+    const jsonStr = JSON.stringify(payload);
+    const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
+    const shareUrl = `${window.location.origin}/?state=${base64}`;
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      addNotification("Calculator state URL copied to clipboard! 🔗", "success");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      addNotification("Failed to copy share URL.", "error");
+    }
+  }
 
   useEffect(() => {
     fetch(`/api/rates?loanType=${loan.loanType}`)
@@ -516,6 +556,15 @@ export default function Home() {
               onClick={saveReport}
             >
               Save this strategy
+            </button>
+            <button
+              type="button"
+              className={UI.btnSecondary}
+              onClick={copyShareUrl}
+              id="share-state-btn"
+            >
+              <i className="fa-solid fa-share-nodes mr-1"></i>
+              {copied ? "URL Copied!" : "Share Strategy Link"}
             </button>
             <button
               type="button"

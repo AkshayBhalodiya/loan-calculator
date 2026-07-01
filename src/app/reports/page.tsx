@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { INR, strategySummary, type StrategyInput } from "@/lib/loan";
 import { UI } from "@/lib/ui-classes";
 import CopyShareButton from "@/components/copy-share-button";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -105,7 +106,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     sort: selectedSort,
     page: safePage,
   };
-  const shareUrl = `http://localhost:3000${buildPageLink(currentState)}`;
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = headersList.get("x-forwarded-proto") || "http";
+  const shareUrl = `${protocol}://${host}${buildPageLink(currentState)}`;
 
   let reports: ReportDoc[] = [];
   let error = "";
