@@ -2,9 +2,16 @@ const fs = require("fs");
 const path = require("path");
 
 function checkEnv() {
-  // Skip env validation at build time (e.g. during `next build` on Vercel).
-  // Environment variables are only available at runtime on the server.
-  if (process.env.NEXT_PHASE === "phase-production-build") {
+  // Skip env validation at build time.
+  // NEXT_PHASE is not yet set when next.config.ts is evaluated,
+  // so we use CI flag and VERCEL_ENV as reliable indicators.
+  const isBuild =
+    process.env.CI === "1" ||
+    process.env.CI === "true" ||
+    process.env.VERCEL === "1" ||
+    process.env.NEXT_PHASE === "phase-production-build";
+
+  if (isBuild) {
     return;
   }
 
