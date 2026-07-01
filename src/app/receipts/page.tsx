@@ -17,6 +17,34 @@ interface SelectedFile {
   errorMsg?: string;
 }
 
+interface ReceiptCategory {
+  id: string;
+  label: string;
+  icon: string;
+  color: string;
+}
+
+const DEFAULT_CATEGORIES: ReceiptCategory[] = [
+  { id: "rent",      label: "Rent & Mortgage",      icon: "fa-solid fa-house",          color: "text-indigo-500" },
+  { id: "food",      label: "Groceries & Food",      icon: "fa-solid fa-cart-shopping",  color: "text-emerald-500" },
+  { id: "insurance",label: "Insurance & Medical",    icon: "fa-solid fa-shield-halved",  color: "text-rose-500" },
+  { id: "transport",label: "Transport & Fuel",       icon: "fa-solid fa-car",            color: "text-amber-500" },
+  { id: "utilities",label: "Utilities & Bills",      icon: "fa-solid fa-bolt",           color: "text-sky-500" },
+];
+
+// Exported so unit tests can import and verify the pure reorder logic
+export function reorderCategories(
+  list: ReceiptCategory[],
+  fromIndex: number,
+  toIndex: number
+): ReceiptCategory[] {
+  if (fromIndex === toIndex) return list;
+  const next = [...list];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
+}
+
 function getFileIconClass(filename: string) {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
   switch (ext) {
@@ -55,6 +83,26 @@ export default function ReceiptsPage() {
   const [uploading, setUploading] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- Receipt Category drag-and-drop reordering ---
+  const [categoryOrder, setCategoryOrder] = useState<ReceiptCategory[]>(DEFAULT_CATEGORIES);
+  const [categoryDragIdx, setCategoryDragIdx] = useState<number | null>(null);
+
+  function handleCategoryDragStart(e: React.DragEvent<HTMLDivElement>, index: number) {
+    setCategoryDragIdx(index);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleCategoryDragOver(e: React.DragEvent<HTMLDivElement>, index: number) {
+    e.preventDefault();
+    if (categoryDragIdx === null || categoryDragIdx === index) return;
+    setCategoryOrder((prev) => reorderCategories(prev, categoryDragIdx, index));
+    setCategoryDragIdx(index);
+  }
+
+  function handleCategoryDragEnd() {
+    setCategoryDragIdx(null);
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -208,6 +256,41 @@ export default function ReceiptsPage() {
       <section className={UI.hero}>
         <h1 className={UI.titleHero}>Receipt Documents</h1>
         <p className={UI.subtitle}>Upload and scan your expense or payment receipts.</p>
+      </section>
+
+      {/* Receipt Categories — drag to reorder priority */}
+      <section className={`${UI.card} p-5 space-y-3`}>
+        <div className="flex items-center gap-2 border-b border-[var(--lw-border)] pb-3">
+          <i className="fa-solid fa-list-ol text-indigo-500"></i>
+          <h2 className={`font-semibold ${UI.titleSm}`}>Receipt Categories</h2>
+          <span className="ml-auto text-[10px] text-[var(--lw-text-muted)]">Drag to reorder priority</span>
+        </div>
+        <div className="divide-y divide-[var(--lw-border)]">
+          {categoryOrder.map((cat, idx) => (
+            <div
+              key={cat.id}
+              draggable
+              onDragStart={(e) => handleCategoryDragStart(e, idx)}
+              onDragOver={(e) => handleCategoryDragOver(e, idx)}
+              onDragEnd={handleCategoryDragEnd}
+              className={`flex items-center gap-3 py-3 px-2 rounded-lg transition-colors duration-150 select-none ${
+                categoryDragIdx === idx
+                  ? "bg-indigo-500/10 opacity-60 ring-1 ring-indigo-500/40"
+                  : "hover:bg-[var(--lw-surface-muted)] cursor-grab active:cursor-grabbing"
+              }`}
+            >
+              {/* Grip handle */}
+              <i className="fa-solid fa-grip-vertical text-slate-400 text-sm" title="Drag to reorder"></i>
+              {/* Priority badge */}
+              <span className="w-5 h-5 rounded-full bg-[var(--lw-surface-muted)] flex items-center justify-center text-[10px] font-bold text-[var(--lw-text-muted)]">
+                {idx + 1}
+              </span>
+              {/* Category icon + label */}
+              <i className={`${cat.icon} ${cat.color}`}></i>
+              <span className="text-sm font-medium text-[var(--lw-text)]">{cat.label}</span>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* Drag & Drop File Picker Zone */}
